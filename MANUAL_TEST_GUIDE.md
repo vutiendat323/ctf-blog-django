@@ -1,77 +1,89 @@
-# Hướng dẫn Kiểm thử Thủ công (Manual Test Guide)
-## Dự án: CTF Blog & Education System
+# 🛡️ Hướng dẫn Kiểm thử Thủ công (Manual Test Guide)
 
-Tài liệu này hướng dẫn Tester cách thiết lập môi trường và thực hiện kiểm thử các tính năng chính của hệ thống.
-
----
-
-## 1. Thiết lập Môi trường (Prerequisites)
-
-Để chạy dự án local, bạn cần cài đặt Docker và Docker Compose.
-
-**Các bước khởi động:**
-1. Mở terminal tại thư mục gốc của dự án.
-2. Chạy lệnh: `docker-compose up -d --build`
-3. Chờ hệ thống khởi động. Truy cập tại: `http://localhost:8000`
-
-**Dữ liệu mẫu (Seed Data):**
-Nếu database trống, hãy chạy lệnh sau để nạp dữ liệu mẫu:
-```bash
-docker-compose exec web python manage.py seed_data
-```
+## Dự án: CTF Blog & Lab System
+**Phiên bản:** 1.1
+**Mục tiêu:** Đảm bảo hệ thống hoạt động ổn định, bảo mật và mang lại trải nghiệm tốt cho cộng đồng CTF.
 
 ---
 
-## 2. Thông tin Tài khoản Kiểm thử
+## 1. Thiết lập & Kiểm tra Môi trường (Environment Sanity Check)
 
-| Vai trò | Username | Password |
-| :--- | :--- | :--- |
-| Admin | `admin` | (Tùy thiết lập hoặc dùng `admin123`) |
-| Member | `tester01` | `password123` |
+Trước khi test, hãy đảm bảo Container chạy đúng:
 
----
-
-## 3. Danh mục Kiểm thử (Test Cases)
-
-### A. Hệ thống Xác thực (Authentication)
-- **Đăng ký (Register):** Kiểm tra tạo tài khoản mới, kiểm tra các ràng buộc (email hợp lệ, mật khẩu trùng khớp).
-- **Đăng nhập (Login):** Kiểm tra đăng nhập thành công, đăng nhập sai pass.
-- **Quên mật khẩu:** Kiểm tra luồng gửi mail reset password (nếu có cấu hình).
-- **Trang cá nhân (Profile):** Kiểm tra xem và cập nhật thông tin cá nhân.
-
-### B. Blog & Nội dung
-- **Trang chủ:** Kiểm tra hiển thị danh sách bài viết mới nhất.
-- **Chi tiết bài viết:** Kiểm tra hiển thị nội dung, hình ảnh, định dạng Markdown.
-- **Tìm kiếm:** Kiểm tra tính năng tìm kiếm bài viết theo từ khóa tại `/search`.
-- **Bình luận:** Kiểm tra việc đăng bình luận (phải đăng nhập) và phản hồi bình luận.
-
-### C. Quản trị (CTF Admin Dashboard)
-- Truy cập: `http://localhost:8000/ctf_admin/`
-- Kiểm tra các biểu đồ thống kê trên Dashboard.
-- Kiểm tra quản lý bài viết (Thêm/Xóa/Sửa).
-
-### D. Các trang thông tin khác
-- **Contact:** Gửi form liên hệ và kiểm tra thông báo thành công.
-- **About:** Kiểm tra hiển thị thông tin giới thiệu.
+1. **Khởi động:** `docker-compose up -d --build`
+2. **Kiểm tra trạng thái:** `docker-compose ps` (Tất cả phải là `Up/Healthy`).
+3. **Nạp dữ liệu mẫu:** 
+   ```bash
+   docker-compose exec web python manage.py seed_data
+   ```
+4. **Kiểm tra kết nối:** Truy cập `http://localhost:8000`. Nếu thấy giao diện Neo-Tokyo/Cyberpunk là OK.
 
 ---
 
-## 4. Kiểm tra Kỹ thuật (Technical Checks)
+## 2. Thông tin Tài khoản Kiểm thử (Test Credentials)
 
-- **Responsive:** Kiểm tra giao diện trên Mobile, Tablet và Desktop.
-- **Tốc độ tải:** Trang chủ không nên mất quá 3 giây để load.
-- **Lỗi hệ thống:** Theo dõi log của Docker để phát hiện lỗi 500:
-  ```bash
-  docker-compose logs -f web
-  ```
+| Vai trò | Username | Password | Mục đích test |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin` | `admin123` | Quản lý bài viết, User, Dashboard. |
+| **Member** | `n30_user` | `password123` | Đăng bình luận, xem Profile. |
+| **Anonymous** | (None) | (None) | Test quyền truy cập công khai. |
 
 ---
 
-## 5. Quy trình báo lỗi (Bug Reporting)
+## 3. Kịch bản Kiểm thử Chi tiết (Test Scenarios)
 
-Khi phát hiện lỗi, vui lòng báo cáo theo mẫu:
-1. **Tiêu đề:** [Feature] - Mô tả ngắn gọn lỗi.
-2. **Bước thực hiện:** (1, 2, 3...)
-3. **Kết quả mong đợi:** ...
-4. **Kết quả thực tế:** (Kèm ảnh chụp màn hình/Log nếu có).
-5. **Mức độ:** (High/Medium/Low).
+### A. Luồng Bảo mật & Xác thực (Security & Auth)
+1. **Đăng ký (Negative Test):**
+   - Thử đăng ký với Email đã tồn tại -> Mong đợi: Báo lỗi "Email already exists".
+   - Thử mật khẩu < 6 ký tự -> Mong đợi: Báo lỗi yêu cầu độ dài tối thiểu.
+2. **Quên mật khẩu (Password Reset):**
+   - Nhập email -> Kiểm tra log Docker: `docker-compose logs web` để xem link reset có gửi ra không.
+   - Truy cập link và đổi pass mới -> Thử đăng nhập bằng pass mới.
+3. **Phân quyền (Authorization):**
+   - Dùng tài khoản Member truy cập thẳng `/ctf_admin/` -> Mong đợi: Bị đá ra trang Login hoặc báo 403 Forbidden.
+
+### B. Nội dung & Tính năng Blog
+1. **Tìm kiếm (Search):**
+   - Tìm từ khóa có dấu, không dấu, hoặc từ khóa không tồn tại.
+   - Thử nhập các ký tự đặc biệt (SQL Injection đơn giản như `' OR 1=1 --`) -> Mong đợi: Không lỗi trang, hiển thị "No results found".
+2. **Bình luận (Comments):**
+   - User chưa đăng nhập có thấy nút Bình luận không? (Mong đợi: Không hoặc yêu cầu Login).
+   - Đăng bình luận có chứa thẻ HTML `<script>alert(1)</script>` (XSS Test) -> Mong đợi: Hệ thống escape code, không hiện alert.
+3. **Bài viết Bí mật (Hidden Flags):**
+   - Truy cập bài viết "Q4 Admin Notes" khi chưa đăng nhập Admin -> Mong đợi: Không tìm thấy bài viết (404).
+
+### C. Quản trị (Admin Dashboard)
+1. **Quản lý Bài viết:**
+   - Tạo bài viết mới, tải lên ảnh Cover -> Kiểm tra xem ảnh có hiển thị đúng từ Cloudinary không.
+   - Chỉnh sửa bài viết cũ -> Lưu và kiểm tra ngoài trang chủ.
+2. **Thống kê:**
+   - Truy cập `/ctf_admin/` -> Kiểm tra các biểu đồ tròn/cột có hiển thị dữ liệu thật không.
+
+---
+
+## 4. Kiểm tra Kỹ thuật & Giao diện (UX/UI & Tech)
+
+- **Dark Mode/Theme:** Kiểm tra màu sắc các thẻ Card, Button có bị lệch tone khi xem trên màn hình độ sáng cao/thấp không.
+- **Mobile Responsive:**
+  - Menu Navbar có thu gọn thành dạng Hamburger không?
+  - Các bảng (Tables) trong bài viết có bị tràn màn hình không?
+- **Performance:** 
+  - Chuyển trang giữa "Home" và "Post Detail" có mượt không (Dưới 1s).
+  - Kiểm tra xem ảnh cover có bị nặng quá không (Sử dụng DevTools Network tab).
+
+---
+
+## 5. Danh sách các Lỗi phổ biến cần tìm (Common Bugs to hunt)
+
+1. **404 Page:** Gõ một URL linh tinh (vd: `/anh-yeu-em`) -> Xem trang 404 có đẹp và có nút "Quay lại trang chủ" không.
+2. **Empty State:** Xóa hết bài viết trong một Category -> Xem trang đó hiển thị "Chưa có bài viết nào" hay trắng trang.
+3. **Form Validation:** Để trống các trường bắt buộc trong trang Contact rồi nhấn Gửi.
+
+---
+
+## 6. Quy trình báo Bug
+
+Gửi Bug qua kênh Slack/Discord của Team hoặc Create Issue trên GitHub theo mẫu:
+- **Environment:** (OS, Browser version)
+- **Steps to Reproduce:** (1... 2... 3...)
+- **Evidence:** (Ảnh chụp màn hình hoặc Video quay màn hình)
